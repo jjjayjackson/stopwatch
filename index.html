@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, maximum-scale=1, user-scalable=no">
+  <meta name="theme-color" content="#000000">
+  <meta name="color-scheme" content="dark">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="Stopwatch">
+  <title>Stopwatch</title>
+  <link rel="manifest" href="./manifest.webmanifest">
+  <link rel="apple-touch-icon" sizes="180x180" href="./icons/apple-touch-icon.png">
+  <link rel="icon" type="image/png" sizes="192x192" href="./icons/icon-192.png">
+  <link rel="stylesheet" href="./styles.css">
+</head>
+<body>
+  <div id="layout-mobile" class="layout-mobile">
+    <main class="app">
+      <div
+        id="display"
+        class="display"
+        role="button"
+        tabindex="0"
+        aria-label="Stopwatch stopped, tap to start"
+      >
+        <span data-part="hours">00</span>
+        <span data-part="minutes">00</span>
+        <span data-part="seconds">00</span>
+        <span data-part="hundredths" class="hundredths">00</span>
+      </div>
+    </main>
+
+    <div id="history-hit" class="history-hit" role="button" aria-label="Open history">
+      <div class="handle" aria-hidden="true"></div>
+    </div>
+
+    <section id="history" class="history" aria-hidden="true" aria-label="History">
+      <ol id="history-list" class="history-list"></ol>
+      <button id="history-exit" type="button" class="history-exit">Exit</button>
+    </section>
+
+    <div id="title-overlay" class="title-overlay" aria-hidden="true">
+      <form class="title-card">
+        <input
+          id="title-input"
+          type="text"
+          maxlength="80"
+          placeholder="Title"
+          autocomplete="off"
+          spellcheck="false"
+          enterkeyhint="done"
+          aria-label="Title"
+        >
+        <button id="title-done" type="button">Done</button>
+      </form>
+    </div>
+  </div>
+
+  <div id="layout-desktop" class="layout-desktop" aria-hidden="true">
+    <main class="desktop-app">
+      <div class="desktop-display" aria-live="polite" aria-atomic="true">
+        <div class="desktop-time">
+          <span data-part="hours">00</span><span class="colon">:</span><span data-part="minutes">00</span><span class="colon">:</span><span data-part="seconds">00</span><span class="colon">.</span><span data-part="hundredths">00</span>
+        </div>
+      </div>
+      <div class="desktop-controls">
+        <button type="button" id="desktop-toggle">Start</button>
+        <button type="button" id="desktop-reset">Reset</button>
+      </div>
+    </main>
+  </div>
+
+  <script src="./script.js"></script>
+</body>
+</html>

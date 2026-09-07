@@ -1,0 +1,348 @@
+:root {
+  --bg: #000;
+  --text: #fff;
+  --muted: #6a6a6a;
+  --dim: rgba(255, 255, 255, 0.22);
+  --handle: rgba(255, 255, 255, 0.28);
+  --surface: #111;
+  --border: #2a2a2a;
+  --hover: #1a1a1a;
+  --safe-top: env(safe-area-inset-top, 0px);
+  --safe-bottom: env(safe-area-inset-bottom, 0px);
+  color-scheme: dark;
+}
+
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+html,
+body {
+  height: 100%;
+  background: var(--bg);
+  color: var(--text);
+  overflow: hidden;
+}
+
+body {
+  position: fixed;
+  inset: 0;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -webkit-user-select: none;
+  user-select: none;
+  -webkit-touch-callout: none;
+  -webkit-tap-highlight-color: transparent;
+  overscroll-behavior: none;
+  touch-action: manipulation;
+}
+
+.layout-mobile {
+  position: absolute;
+  inset: 0;
+}
+
+.app {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: calc(var(--safe-top) + 2.5rem) 1.25rem calc(var(--safe-bottom) + 1.5rem);
+}
+
+.display {
+  width: min(100%, 26rem);
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.12em;
+  font-variant-numeric: tabular-nums;
+  font-weight: 600;
+  font-size: min(28vw, 14vh, 7.5rem);
+  letter-spacing: 0.02em;
+  line-height: 0.92;
+  text-align: center;
+  outline: none;
+  cursor: pointer;
+  touch-action: none;
+}
+
+.display .hundredths {
+  color: rgba(255, 255, 255, 0.42);
+  font-size: 0.78em;
+  font-weight: 500;
+}
+
+.history-hit {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 30;
+  height: calc(var(--safe-top) + 2.75rem);
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  padding-bottom: 0.7rem;
+  cursor: pointer;
+  touch-action: none;
+}
+
+.handle {
+  width: 2.25rem;
+  height: 0.28rem;
+  border-radius: 999px;
+  background: var(--handle);
+}
+
+.history {
+  position: absolute;
+  inset: 0;
+  z-index: 20;
+  background: var(--bg);
+  padding: calc(var(--safe-top) + 2.75rem) 1.35rem 0;
+  transform: translateY(-102%);
+  transition: transform 0.28s ease;
+  overflow: hidden;
+  pointer-events: none;
+  display: flex;
+  flex-direction: column;
+}
+
+.history.is-open {
+  transform: translateY(0);
+  pointer-events: auto;
+  touch-action: pan-y;
+}
+
+.history-list {
+  list-style: none;
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  -webkit-overflow-scrolling: touch;
+  display: flex;
+  flex-direction: column;
+  gap: 1.35rem;
+  padding-bottom: 1.5rem;
+  touch-action: pan-y;
+}
+
+.history-exit {
+  appearance: none;
+  border: none;
+  background: transparent;
+  color: var(--text);
+  font: inherit;
+  font-size: 1.05rem;
+  font-weight: 600;
+  width: 100%;
+  flex: 0 0 auto;
+  padding: 1rem 0 calc(var(--safe-bottom) + 1.25rem);
+  cursor: pointer;
+}
+
+.history-item {
+  display: grid;
+  gap: 0.18rem;
+}
+
+.history-started {
+  color: var(--muted);
+  font-size: 0.82rem;
+  font-weight: 500;
+}
+
+.history-title {
+  font-size: 1.02rem;
+  font-weight: 600;
+}
+
+.history-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+}
+
+.history-duration {
+  font-variant-numeric: tabular-nums;
+  font-size: 1.35rem;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+}
+
+.trash {
+  appearance: none;
+  border: none;
+  background: transparent;
+  color: var(--muted);
+  width: 2.5rem;
+  height: 2.5rem;
+  display: grid;
+  place-items: center;
+  cursor: pointer;
+  flex: 0 0 auto;
+}
+
+.trash svg {
+  width: 1.15rem;
+  height: 1.15rem;
+  display: block;
+}
+
+.title-overlay {
+  position: absolute;
+  inset: 0;
+  z-index: 40;
+  display: none;
+  align-items: flex-end;
+  justify-content: center;
+  background: rgba(0, 0, 0, 0.45);
+  padding: 0 1rem calc(var(--safe-bottom) + 1rem + var(--keyboard-inset, 0px));
+  touch-action: auto;
+}
+
+.title-overlay.is-open {
+  display: flex;
+}
+
+.title-card {
+  width: min(100%, 26rem);
+  background: #161616;
+  border-radius: 1rem;
+  padding: 0.9rem;
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 0.6rem;
+  align-items: center;
+}
+
+.title-card input {
+  appearance: none;
+  width: 100%;
+  border: none;
+  background: transparent;
+  color: var(--text);
+  font: inherit;
+  font-size: 1.05rem;
+  outline: none;
+  -webkit-user-select: text;
+  user-select: text;
+}
+
+.title-card input::placeholder {
+  color: var(--muted);
+}
+
+.title-card button {
+  appearance: none;
+  border: none;
+  background: transparent;
+  color: var(--text);
+  font: inherit;
+  font-weight: 600;
+  padding: 0.45rem 0.35rem;
+  cursor: pointer;
+}
+
+.layout-desktop {
+  display: none;
+  height: 100%;
+  width: 100%;
+  place-items: center;
+  padding: 2rem;
+}
+
+.desktop-app {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: clamp(12px, 2.2vh, 28px);
+  width: min(92vw, 920px);
+}
+
+.desktop-display {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: clamp(10px, 1.6vw, 18px);
+  padding: clamp(18px, 4.5vh, 48px) clamp(20px, 4vw, 48px);
+}
+
+.desktop-time {
+  font-variant-numeric: tabular-nums;
+  font-weight: 600;
+  font-size: clamp(1.85rem, 9.2vw, 5.8rem);
+  letter-spacing: 0.04em;
+  line-height: 1;
+}
+
+.desktop-time .colon {
+  color: var(--muted);
+  font-weight: 500;
+  padding: 0 0.04em;
+}
+
+.desktop-controls {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: clamp(10px, 1.6vw, 18px);
+}
+
+.desktop-controls button {
+  appearance: none;
+  background: var(--surface);
+  color: var(--text);
+  border: 1px solid var(--border);
+  border-radius: clamp(10px, 1.6vw, 18px);
+  font: inherit;
+  font-size: clamp(1.05rem, 2.8vw, 1.85rem);
+  font-weight: 600;
+  padding: clamp(14px, 2.6vh, 28px) 0;
+  cursor: pointer;
+}
+
+.desktop-controls button:hover {
+  background: var(--hover);
+}
+
+.desktop-controls button:active {
+  transform: scale(0.985);
+}
+
+.desktop-controls button:focus-visible {
+  outline: 2px solid #fff;
+  outline-offset: 3px;
+}
+
+@media (min-width: 900px) {
+  html,
+  body {
+    overflow: auto;
+  }
+
+  body {
+    position: static;
+    inset: auto;
+    display: grid;
+    place-items: center;
+    touch-action: auto;
+  }
+
+  .layout-mobile {
+    display: none;
+  }
+
+  .layout-desktop {
+    display: grid;
+  }
+}
