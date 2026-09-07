@@ -1,4 +1,4 @@
-const CACHE = "stopwatch-pwa-v4";
+const CACHE = "stopwatch-pwa-v5";
 const ASSETS = [
   "./",
   "./index.html",

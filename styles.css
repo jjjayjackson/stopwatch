@@ -261,67 +261,103 @@ body {
 }
 
 .desktop-app {
-  display: flex;
-  flex-direction: column;
-  align-items: stretch;
-  gap: clamp(12px, 2.2vh, 28px);
-  width: min(92vw, 920px);
-}
-
-.desktop-display {
-  display: flex;
+  display: grid;
+  grid-template-columns: auto minmax(0, max-content);
   align-items: center;
-  justify-content: center;
-  background: var(--surface);
-  border: 1px solid var(--border);
-  border-radius: clamp(10px, 1.6vw, 18px);
-  padding: clamp(18px, 4.5vh, 48px) clamp(20px, 4vw, 48px);
+  column-gap: 0.55em;
+  row-gap: 0.2em;
 }
 
-.desktop-time {
+.desktop-digit {
   font-variant-numeric: tabular-nums;
   font-weight: 600;
-  font-size: clamp(1.85rem, 9.2vw, 5.8rem);
+  font-size: 1.35rem;
   letter-spacing: 0.04em;
+  line-height: 1;
+  text-align: right;
+}
+
+.desktop-hours { grid-column: 1; grid-row: 1; }
+.desktop-minutes { grid-column: 1; grid-row: 2; }
+.desktop-seconds { grid-column: 1; grid-row: 3; }
+.desktop-hundredths { grid-column: 1; grid-row: 4; }
+
+.desktop-title {
+  grid-column: 2;
+  grid-row: 1;
+  appearance: none;
+  width: 8.5em;
+  max-width: 40vw;
+  background: transparent;
+  border: none;
+  color: var(--text);
+  font: inherit;
+  font-size: 1.05rem;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  outline: none;
+  -webkit-user-select: text;
+  user-select: text;
+}
+
+.desktop-title::placeholder {
+  color: var(--muted);
+  font-weight: 500;
+}
+
+.desktop-app button {
+  appearance: none;
+  background: transparent;
+  color: var(--text);
+  border: none;
+  font: inherit;
+  cursor: pointer;
+  display: grid;
+  place-items: center;
+  justify-self: start;
+  width: 1.7em;
+  height: 1.35em;
   line-height: 1;
 }
 
-.desktop-time .colon {
-  color: var(--muted);
-  font-weight: 500;
-  padding: 0 0.04em;
+#desktop-toggle {
+  grid-column: 2;
+  grid-row: 2;
 }
 
-.desktop-controls {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: clamp(10px, 1.6vw, 18px);
+#desktop-reset {
+  grid-column: 2;
+  grid-row: 3;
+  font-size: 1.05rem;
+  font-weight: 700;
+  letter-spacing: 0.02em;
 }
 
-.desktop-controls button {
-  appearance: none;
-  background: var(--surface);
-  color: var(--text);
-  border: 1px solid var(--border);
-  border-radius: clamp(10px, 1.6vw, 18px);
-  font: inherit;
-  font-size: clamp(1.05rem, 2.8vw, 1.85rem);
-  font-weight: 600;
-  padding: clamp(14px, 2.6vh, 28px) 0;
-  cursor: pointer;
+#desktop-toggle svg {
+  width: 1.15em;
+  height: 1.15em;
+  display: block;
 }
 
-.desktop-controls button:hover {
-  background: var(--hover);
+#desktop-toggle .icon-pause {
+  display: none;
 }
 
-.desktop-controls button:active {
-  transform: scale(0.985);
+#desktop-toggle.is-running .icon-play {
+  display: none;
 }
 
-.desktop-controls button:focus-visible {
+#desktop-toggle.is-running .icon-pause {
+  display: block;
+}
+
+.desktop-app button:active {
+  transform: scale(0.94);
+}
+
+.desktop-app button:focus-visible {
   outline: 2px solid #fff;
-  outline-offset: 3px;
+  outline-offset: 2px;
 }
 
 @media (min-width: 900px) {

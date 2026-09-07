@@ -278,7 +278,8 @@ function renderTime(now = Date.now()) {
     "aria-label",
     stopwatch.running ? "Stopwatch running, tap to stop" : "Stopwatch stopped, tap to start"
   );
-  desktopToggleEl.textContent = stopwatch.running ? "Stop" : "Start";
+  desktopToggleEl.classList.toggle("is-running", stopwatch.running);
+  desktopToggleEl.setAttribute("aria-label", stopwatch.running ? "Pause" : "Play");
 }
 
 function stopTicking() {

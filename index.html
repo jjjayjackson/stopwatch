@@ -59,16 +59,30 @@
   </div>
 
   <div id="layout-desktop" class="layout-desktop" aria-hidden="true">
-    <main class="desktop-app">
-      <div class="desktop-display" aria-live="polite" aria-atomic="true">
-        <div class="desktop-time">
-          <span data-part="hours">00</span><span class="colon">:</span><span data-part="minutes">00</span><span class="colon">:</span><span data-part="seconds">00</span><span class="colon">.</span><span data-part="hundredths">00</span>
-        </div>
-      </div>
-      <div class="desktop-controls">
-        <button type="button" id="desktop-toggle">Start</button>
-        <button type="button" id="desktop-reset">Reset</button>
-      </div>
+    <main class="desktop-app" aria-live="polite" aria-atomic="true">
+      <span class="desktop-digit desktop-hours" data-part="hours">00</span>
+      <input
+        type="text"
+        id="desktop-title"
+        class="desktop-title"
+        placeholder="Title"
+        maxlength="80"
+        autocomplete="off"
+        spellcheck="false"
+        aria-label="Stopwatch title"
+      >
+      <span class="desktop-digit desktop-minutes" data-part="minutes">00</span>
+      <button type="button" id="desktop-toggle" aria-label="Play">
+        <svg class="icon-play" viewBox="0 0 24 24" aria-hidden="true">
+          <path fill="currentColor" d="M8 5v14l11-7z"/>
+        </svg>
+        <svg class="icon-pause" viewBox="0 0 24 24" aria-hidden="true">
+          <path fill="currentColor" d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/>
+        </svg>
+      </button>
+      <span class="desktop-digit desktop-seconds" data-part="seconds">00</span>
+      <button type="button" id="desktop-reset" aria-label="Reset">R</button>
+      <span class="desktop-digit desktop-hundredths" data-part="hundredths">00</span>
     </main>
   </div>
 
