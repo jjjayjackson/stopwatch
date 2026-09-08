@@ -32,12 +32,21 @@
       </div>
     </main>
 
-    <div id="history-hit" class="history-hit" role="button" aria-label="Open history">
+    <div id="history-hit" class="history-hit" role="button" aria-label="Swipe down to open history">
       <div class="handle" aria-hidden="true"></div>
     </div>
 
     <section id="history" class="history" aria-hidden="true" aria-label="History">
-      <ol id="history-list" class="history-list"></ol>
+      <div class="history-stacks">
+        <section id="history-temporary-stack" class="history-stack" hidden>
+          <h2 class="history-stack-label">Temporary</h2>
+          <ol id="history-temporary" class="history-list"></ol>
+        </section>
+        <section id="history-permanent-stack" class="history-stack" hidden>
+          <h2 class="history-stack-label">Permanent</h2>
+          <ol id="history-permanent" class="history-list"></ol>
+        </section>
+      </div>
       <button id="history-exit" type="button" class="history-exit">Exit</button>
     </section>
 
@@ -86,6 +95,8 @@
     </main>
   </div>
 
+  <script src="./vendor/supabase.js"></script>
+  <script src="./supabase-config.js"></script>
   <script src="./script.js"></script>
 </body>
 </html>

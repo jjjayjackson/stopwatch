@@ -1,5 +1,6 @@
 const TEMPORARY_HISTORY_TTL_MS = 10 * 60 * 1000;
 const STORAGE_KEY = "stopwatch-pwa";
+const LIVE_ROW_ID = "default";
 const MIN_SAVE_DURATION_MS = 10;
 const TAP_SLOP_PX = 14;
 const SWIPE_MIN_PX = 96;
@@ -175,6 +176,54 @@ function saveState(state) {
   return history;
 }
 
+const supabase =
+  window.supabase && window.STOPWATCH_SUPABASE
+    ? window.supabase.createClient(
+        window.STOPWATCH_SUPABASE.url,
+        window.STOPWATCH_SUPABASE.anonKey,
+        {
+          auth: {
+            persistSession: false,
+            autoRefreshToken: false,
+            detectSessionInUrl: false,
+            storage: {
+              getItem: () => null,
+              setItem: () => {},
+              removeItem: () => {},
+            },
+          },
+        }
+      )
+    : null;
+
+function liveSnapshot(value) {
+  return JSON.stringify({
+    running: Boolean(value.running),
+    startedAt: value.startedAt == null ? null : Number(value.startedAt),
+    accumulatedElapsed: Math.max(0, Number(value.accumulatedElapsed) || 0),
+  });
+}
+
+function fromLiveRow(row) {
+  return hydrate({
+    running: Boolean(row.running),
+    startedAt: row.started_at,
+    accumulatedElapsed: row.elapsed_ms,
+    createdAt: row.running ? Number(row.started_at) || Date.now() : null,
+  });
+}
+
+function toLiveRow(value) {
+  const running = Boolean(value.running);
+  return {
+    id: LIVE_ROW_ID,
+    elapsed_ms: Math.max(0, Math.floor(Number(value.accumulatedElapsed) || 0)),
+    running,
+    started_at: running && value.startedAt != null ? Number(value.startedAt) : null,
+    updated_at: new Date().toISOString(),
+  };
+}
+
 function bindGestures(element, handlers) {
   let origin = null;
 
@@ -235,7 +284,10 @@ const layoutMobileEl = document.getElementById("layout-mobile");
 const layoutDesktopEl = document.getElementById("layout-desktop");
 const displayEl = document.getElementById("display");
 const historyEl = document.getElementById("history");
-const historyListEl = document.getElementById("history-list");
+const historyTemporaryStackEl = document.getElementById("history-temporary-stack");
+const historyPermanentStackEl = document.getElementById("history-permanent-stack");
+const historyTemporaryEl = document.getElementById("history-temporary");
+const historyPermanentEl = document.getElementById("history-permanent");
 const historyHitEl = document.getElementById("history-hit");
 const historyExitEl = document.getElementById("history-exit");
 const titleOverlayEl = document.getElementById("title-overlay");
@@ -250,9 +302,112 @@ let history = [];
 let frame = 0;
 let pendingTitleId = null;
 let historyOpen = false;
+let expiryTimer = 0;
+let livePersistChain = Promise.resolve();
+let lastLiveSnapshot = liveSnapshot(stopwatch);
+let liveWriteId = 0;
 
-function persist() {
+function nextExpiresAt(records, now = Date.now()) {
+  let soonest = null;
+  for (const record of records) {
+    if (!record || record.permanent || record.expiresAt == null) continue;
+    if (record.expiresAt <= now) return now;
+    if (soonest == null || record.expiresAt < soonest) soonest = record.expiresAt;
+  }
+  return soonest;
+}
+
+function armExpiryTimer() {
+  if (expiryTimer) {
+    clearTimeout(expiryTimer);
+    expiryTimer = 0;
+  }
+  const soonest = nextExpiresAt(history);
+  if (soonest == null) return;
+  expiryTimer = setTimeout(onExpiryTimer, Math.max(0, soonest - Date.now()));
+}
+
+function onExpiryTimer() {
+  expiryTimer = 0;
+  const purged = purgeExpired(history);
+  if (purged.length === history.length) {
+    armExpiryTimer();
+    return;
+  }
+  history = purged;
+  persist();
+  if (historyOpen) renderHistory();
+}
+
+function persist({ cloud = false } = {}) {
   history = saveState({ stopwatch, history });
+  armExpiryTimer();
+  if (cloud) queueLiveSave();
+}
+
+function applyLiveStopwatch(next) {
+  const snapshot = liveSnapshot(next);
+  if (snapshot === lastLiveSnapshot || snapshot === liveSnapshot(stopwatch)) return;
+  stopwatch = next;
+  lastLiveSnapshot = snapshot;
+  persist();
+  renderTime();
+  startTicking();
+}
+
+async function fetchLiveStopwatch() {
+  if (!supabase) return null;
+  const { data, error } = await supabase
+    .from("stopwatch")
+    .select("elapsed_ms, running, started_at")
+    .eq("id", LIVE_ROW_ID)
+    .maybeSingle();
+  if (error) throw error;
+  return data;
+}
+
+async function saveLiveStopwatch(value) {
+  if (!supabase) return;
+  const { error } = await supabase.from("stopwatch").upsert(toLiveRow(value));
+  if (error) throw error;
+}
+
+function queueLiveSave() {
+  liveWriteId += 1;
+  const snapshot = hydrate(stopwatch);
+  lastLiveSnapshot = liveSnapshot(snapshot);
+  livePersistChain = livePersistChain
+    .then(() => saveLiveStopwatch(snapshot))
+    .catch((err) => {
+      console.warn("Stopwatch cloud save failed — using local cache.", err);
+    });
+}
+
+async function pullLiveStopwatch() {
+  const writeId = liveWriteId;
+  try {
+    const row = await fetchLiveStopwatch();
+    if (!row || writeId !== liveWriteId) return;
+    applyLiveStopwatch(fromLiveRow(row));
+  } catch (err) {
+    console.warn("Stopwatch cloud load failed — using local cache.", err);
+  }
+}
+
+function subscribeLiveStopwatch() {
+  if (!supabase) return;
+  supabase
+    .channel("stopwatch-live")
+    .on(
+      "postgres_changes",
+      { event: "*", schema: "public", table: "stopwatch", filter: `id=eq.${LIVE_ROW_ID}` },
+      (payload) => {
+        const row = payload.new;
+        if (!row) return;
+        applyLiveStopwatch(fromLiveRow(row));
+      }
+    )
+    .subscribe();
 }
 
 function isDesktop() {
@@ -312,52 +467,75 @@ function formatStartedAt(ts) {
   });
 }
 
+const TRASH_ICON =
+  '<svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M9 3h6l1 2h4v2H4V5h4l1-2zm-3 6h12v12H6V9zm3 2v8h1.8V11H9zm4.2 0v8H15V11h-1.8z"/></svg>';
+
+function historyItem(record, { deletable }) {
+  const item = document.createElement("li");
+  item.className = "history-item";
+  item.dataset.id = record.id;
+
+  const started = document.createElement("p");
+  started.className = "history-started";
+  started.textContent = formatStartedAt(record.createdAt);
+
+  const title = document.createElement("p");
+  title.className = "history-title";
+  title.textContent = record.title;
+
+  const row = document.createElement("div");
+  row.className = "history-row";
+
+  const duration = document.createElement("p");
+  duration.className = "history-duration";
+  duration.textContent = formatHorizontal(record.duration);
+
+  row.append(duration);
+
+  if (deletable) {
+    const trash = document.createElement("button");
+    trash.type = "button";
+    trash.className = "trash";
+    trash.setAttribute("aria-label", "Delete permanently");
+    trash.innerHTML = TRASH_ICON;
+    trash.addEventListener("click", (event) => {
+      event.stopPropagation();
+      history = history.filter((entry) => entry.id !== record.id);
+      renderHistory();
+    });
+    row.append(trash);
+  }
+
+  item.append(started);
+  if (record.title) item.append(title);
+  item.append(row);
+  return item;
+}
+
+function fillStack(stackEl, listEl, records, options) {
+  listEl.replaceChildren();
+  const empty = records.length === 0;
+  stackEl.hidden = empty;
+  if (empty) return;
+  for (const record of records) {
+    listEl.append(historyItem(record, options));
+  }
+}
+
 function renderHistory() {
   persist();
-  historyListEl.replaceChildren();
-
-  for (const record of history) {
-    const item = document.createElement("li");
-    item.className = "history-item";
-    item.dataset.id = record.id;
-
-    const started = document.createElement("p");
-    started.className = "history-started";
-    started.textContent = formatStartedAt(record.createdAt);
-
-    const title = document.createElement("p");
-    title.className = "history-title";
-    title.textContent = record.title;
-
-    const row = document.createElement("div");
-    row.className = "history-row";
-
-    const duration = document.createElement("p");
-    duration.className = "history-duration";
-    duration.textContent = formatHorizontal(record.duration);
-
-    row.append(duration);
-
-    if (!record.permanent) {
-      const trash = document.createElement("button");
-      trash.type = "button";
-      trash.className = "trash";
-      trash.setAttribute("aria-label", "Delete temporary record");
-      trash.innerHTML =
-        '<svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M9 3h6l1 2h4v2H4V5h4l1-2zm-3 6h12v12H6V9zm3 2v8h1.8V11H9zm4.2 0v8H15V11h-1.8z"/></svg>';
-      trash.addEventListener("click", (event) => {
-        event.stopPropagation();
-        history = history.filter((entry) => entry.id !== record.id);
-        renderHistory();
-      });
-      row.append(trash);
-    }
-
-    item.append(started);
-    if (record.title) item.append(title);
-    item.append(row);
-    historyListEl.append(item);
-  }
+  fillStack(
+    historyTemporaryStackEl,
+    historyTemporaryEl,
+    history.filter((record) => !record.permanent),
+    { deletable: false }
+  );
+  fillStack(
+    historyPermanentStackEl,
+    historyPermanentEl,
+    history.filter((record) => record.permanent),
+    { deletable: true }
+  );
 }
 
 function setHistoryOpen(open) {
@@ -365,6 +543,10 @@ function setHistoryOpen(open) {
   historyEl.classList.toggle("is-open", open);
   historyHitEl.classList.toggle("is-open", open);
   historyEl.setAttribute("aria-hidden", open ? "false" : "true");
+  historyHitEl.setAttribute(
+    "aria-label",
+    open ? "Swipe up to close history" : "Swipe down to open history"
+  );
   if (open) renderHistory();
 }
 
@@ -378,7 +560,7 @@ function captureDuration() {
 function resetStopwatch() {
   stopTicking();
   stopwatch = reset();
-  persist();
+  persist({ cloud: true });
   renderTime();
 }
 
@@ -423,6 +605,7 @@ function applyLoaded() {
   const loaded = loadState();
   stopwatch = loaded.stopwatch;
   history = loaded.history;
+  lastLiveSnapshot = liveSnapshot(stopwatch);
   persist();
   renderTime();
   startTicking();
@@ -432,7 +615,7 @@ bindGestures(displayEl, {
   onTap() {
     if (isDesktop() || historyOpen) return;
     stopwatch = toggle(stopwatch);
-    persist();
+    persist({ cloud: true });
     renderTime();
     startTicking();
   },
@@ -447,10 +630,6 @@ bindGestures(displayEl, {
 });
 
 bindGestures(historyHitEl, {
-  onTap() {
-    if (isDesktop()) return;
-    setHistoryOpen(!historyOpen);
-  },
   onSwipeDown() {
     if (isDesktop()) return;
     setHistoryOpen(true);
@@ -502,6 +681,7 @@ document.addEventListener("visibilitychange", () => {
   persist();
   renderTime();
   if (document.visibilityState === "visible") {
+    pullLiveStopwatch();
     if (historyOpen) renderHistory();
     startTicking();
   } else {
@@ -516,7 +696,7 @@ displayEl.addEventListener("keydown", (event) => {
     event.preventDefault();
     if (isDesktop() || historyOpen) return;
     stopwatch = toggle(stopwatch);
-    persist();
+    persist({ cloud: true });
     renderTime();
     startTicking();
   }
@@ -524,7 +704,7 @@ displayEl.addEventListener("keydown", (event) => {
 
 desktopToggleEl.addEventListener("click", () => {
   stopwatch = toggle(stopwatch);
-  persist();
+  persist({ cloud: true });
   renderTime();
   startTicking();
 });
@@ -541,6 +721,7 @@ if (typeof desktopMq.addEventListener === "function") {
 
 applyLoaded();
 applyLayout();
+pullLiveStopwatch().then(subscribeLiveStopwatch);
 
 if ("serviceWorker" in navigator) {
   window.addEventListener("load", () => {
