@@ -31,55 +31,11 @@
         <span data-part="hundredths" class="hundredths">00</span>
       </div>
     </main>
-
-    <div id="history-hit" class="history-hit" role="button" aria-label="Swipe down to open history">
-      <div class="handle" aria-hidden="true"></div>
-    </div>
-
-    <section id="history" class="history" aria-hidden="true" aria-label="History">
-      <div class="history-stacks">
-        <section id="history-temporary-stack" class="history-stack" hidden>
-          <h2 class="history-stack-label">Temporary</h2>
-          <ol id="history-temporary" class="history-list"></ol>
-        </section>
-        <section id="history-permanent-stack" class="history-stack" hidden>
-          <h2 class="history-stack-label">Permanent</h2>
-          <ol id="history-permanent" class="history-list"></ol>
-        </section>
-      </div>
-      <button id="history-exit" type="button" class="history-exit">Exit</button>
-    </section>
-
-    <div id="title-overlay" class="title-overlay" aria-hidden="true">
-      <form class="title-card">
-        <input
-          id="title-input"
-          type="text"
-          maxlength="80"
-          placeholder="Title"
-          autocomplete="off"
-          spellcheck="false"
-          enterkeyhint="done"
-          aria-label="Title"
-        >
-        <button id="title-done" type="button">Done</button>
-      </form>
-    </div>
   </div>
 
   <div id="layout-desktop" class="layout-desktop" aria-hidden="true">
     <main class="desktop-app" aria-live="polite" aria-atomic="true">
       <span class="desktop-digit desktop-hours" data-part="hours">00</span>
-      <input
-        type="text"
-        id="desktop-title"
-        class="desktop-title"
-        placeholder="Title"
-        maxlength="80"
-        autocomplete="off"
-        spellcheck="false"
-        aria-label="Stopwatch title"
-      >
       <span class="desktop-digit desktop-minutes" data-part="minutes">00</span>
       <button type="button" id="desktop-toggle" aria-label="Play">
         <svg class="icon-play" viewBox="0 0 24 24" aria-hidden="true">
