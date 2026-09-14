@@ -1,5 +1,4 @@
 const STORAGE_KEY = "stopwatch-pwa";
-const LIVE_ROW_ID = "default";
 const TAP_SLOP_PX = 14;
 const SWIPE_MIN_PX = 96;
 const SWIPE_DOMINANCE = 1.35;
@@ -124,53 +123,6 @@ function saveState(state) {
   );
 }
 
-const supabase =
-  window.supabase && window.STOPWATCH_SUPABASE
-    ? window.supabase.createClient(
-        window.STOPWATCH_SUPABASE.url,
-        window.STOPWATCH_SUPABASE.anonKey,
-        {
-          auth: {
-            persistSession: false,
-            autoRefreshToken: false,
-            detectSessionInUrl: false,
-            storage: {
-              getItem: () => null,
-              setItem: () => {},
-              removeItem: () => {},
-            },
-          },
-        }
-      )
-    : null;
-
-function liveSnapshot(value) {
-  return JSON.stringify({
-    running: Boolean(value.running),
-    startedAt: value.startedAt == null ? null : Number(value.startedAt),
-    accumulatedElapsed: Math.max(0, Number(value.accumulatedElapsed) || 0),
-  });
-}
-
-function fromLiveRow(row) {
-  return hydrate({
-    running: Boolean(row.running),
-    startedAt: row.started_at,
-    accumulatedElapsed: row.elapsed_ms,
-  });
-}
-
-function toLiveRow(value) {
-  const running = Boolean(value.running);
-  return {
-    id: LIVE_ROW_ID,
-    elapsed_ms: Math.max(0, Math.floor(Number(value.accumulatedElapsed) || 0)),
-    running,
-    started_at: running && value.startedAt != null ? Number(value.startedAt) : null,
-    updated_at: new Date().toISOString(),
-  };
-}
-
 function bindGestures(element, handlers) {
   let origin = null;
 
@@ -236,78 +188,9 @@ const desktopMq = window.matchMedia(DESKTOP_QUERY);
 
 let stopwatch = createStopwatch();
 let frame = 0;
-let livePersistChain = Promise.resolve();
-let lastLiveSnapshot = liveSnapshot(stopwatch);
-let liveWriteId = 0;
 
-function persist({ cloud = false } = {}) {
+function persist() {
   saveState({ stopwatch });
-  if (cloud) queueLiveSave();
-}
-
-function applyLiveStopwatch(next) {
-  const snapshot = liveSnapshot(next);
-  if (snapshot === lastLiveSnapshot || snapshot === liveSnapshot(stopwatch)) return;
-  stopwatch = next;
-  lastLiveSnapshot = snapshot;
-  persist();
-  renderTime();
-  startTicking();
-}
-
-async function fetchLiveStopwatch() {
-  if (!supabase) return null;
-  const { data, error } = await supabase
-    .from("stopwatch")
-    .select("elapsed_ms, running, started_at")
-    .eq("id", LIVE_ROW_ID)
-    .maybeSingle();
-  if (error) throw error;
-  return data;
-}
-
-async function saveLiveStopwatch(value) {
-  if (!supabase) return;
-  const { error } = await supabase.from("stopwatch").upsert(toLiveRow(value));
-  if (error) throw error;
-}
-
-function queueLiveSave() {
-  liveWriteId += 1;
-  const snapshot = hydrate(stopwatch);
-  lastLiveSnapshot = liveSnapshot(snapshot);
-  livePersistChain = livePersistChain
-    .then(() => saveLiveStopwatch(snapshot))
-    .catch((err) => {
-      console.warn("Stopwatch cloud save failed — using local cache.", err);
-    });
-}
-
-async function pullLiveStopwatch() {
-  const writeId = liveWriteId;
-  try {
-    const row = await fetchLiveStopwatch();
-    if (!row || writeId !== liveWriteId) return;
-    applyLiveStopwatch(fromLiveRow(row));
-  } catch (err) {
-    console.warn("Stopwatch cloud load failed — using local cache.", err);
-  }
-}
-
-function subscribeLiveStopwatch() {
-  if (!supabase) return;
-  supabase
-    .channel("stopwatch-live")
-    .on(
-      "postgres_changes",
-      { event: "*", schema: "public", table: "stopwatch", filter: `id=eq.${LIVE_ROW_ID}` },
-      (payload) => {
-        const row = payload.new;
-        if (!row) return;
-        applyLiveStopwatch(fromLiveRow(row));
-      }
-    )
-    .subscribe();
 }
 
 function isDesktop() {
@@ -360,14 +243,13 @@ function startTicking() {
 function resetStopwatch() {
   stopTicking();
   stopwatch = reset();
-  persist({ cloud: true });
+  persist();
   renderTime();
 }
 
 function applyLoaded() {
   const loaded = loadState();
   stopwatch = loaded.stopwatch;
-  lastLiveSnapshot = liveSnapshot(stopwatch);
   persist();
   renderTime();
   startTicking();
@@ -377,7 +259,7 @@ bindGestures(displayEl, {
   onTap() {
     if (isDesktop()) return;
     stopwatch = toggle(stopwatch);
-    persist({ cloud: true });
+    persist();
     renderTime();
     startTicking();
   },
@@ -401,7 +283,6 @@ document.addEventListener("visibilitychange", () => {
   persist();
   renderTime();
   if (document.visibilityState === "visible") {
-    pullLiveStopwatch();
     startTicking();
   } else {
     stopTicking();
@@ -415,7 +296,7 @@ displayEl.addEventListener("keydown", (event) => {
     event.preventDefault();
     if (isDesktop()) return;
     stopwatch = toggle(stopwatch);
-    persist({ cloud: true });
+    persist();
     renderTime();
     startTicking();
   }
@@ -423,7 +304,7 @@ displayEl.addEventListener("keydown", (event) => {
 
 desktopToggleEl.addEventListener("click", () => {
   stopwatch = toggle(stopwatch);
-  persist({ cloud: true });
+  persist();
   renderTime();
   startTicking();
 });
@@ -440,7 +321,6 @@ if (typeof desktopMq.addEventListener === "function") {
 
 applyLoaded();
 applyLayout();
-pullLiveStopwatch().then(subscribeLiveStopwatch);
 
 if ("serviceWorker" in navigator) {
   window.addEventListener("load", () => {

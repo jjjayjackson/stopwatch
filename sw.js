@@ -1,11 +1,9 @@
-const CACHE = "stopwatch-pwa-v9";
+const CACHE = "stopwatch-pwa-v10";
 const ASSETS = [
   "./",
   "./index.html",
   "./styles.css",
   "./script.js",
-  "./vendor/supabase.js",
-  "./supabase-config.js",
   "./manifest.webmanifest",
   "./icons/icon-192.png",
   "./icons/icon-512.png",
